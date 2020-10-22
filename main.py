@@ -27,8 +27,16 @@ def main():
     try:
         print("Renaming your folder from:", args.mount, "to:", root)
         os.rename( args.mount, root )
+        kwds = { 'foreground' : True, }
+        if os.name == 'nt':
+            kwds['allow_other'] = True   # check this ...
+            kwds['uid'] = -1
+        else:
+            # windows does not want the mount point to exist
+            # linux does want it to exist already
+            os.mkdir( args.mount )
         disk = id11diskmounter.ID11DiskMounter( root, data )
-        fuse = id11diskmounter.FUSE( disk, args.mount, foreground=True, allow_other=True, uid=-1)
+        fuse = id11diskmounter.FUSE( disk, args.mount, **kwds )
     except KeyboardInterrupt:
         print("Quitting")
     finally:
@@ -38,6 +46,6 @@ def main():
         # close h5 and free 
         del disk
         
-
 if __name__ == '__main__':
     main()
+

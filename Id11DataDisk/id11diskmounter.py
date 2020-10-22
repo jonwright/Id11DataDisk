@@ -27,16 +27,18 @@ class ID11DiskMounter( LoggingMixIn, Operations):
         self.st = dict((key, getattr(st, key)) for key in (
             'st_atime', 'st_ctime', 'st_gid', 'st_mtime',
             'st_nlink', 'st_uid'))
-        self.st['st_mode'] = stat.S_IFREG | 0o444 # everyone can read these files
-        self.st['st_size'] = self.data.filesize()   # assume all are the same size
+        self.st['st_mode'] = stat.S_IFREG | 0o444 # everyone can read files
+        self.st['st_size'] = self.data.filesize() # assume all are the same size
         #
-        # Create a mapping of file descriptors, system files versus our fake files
+        # Create a mapping of file descriptors, system files versus our
+        # fake files
         # keys in here are the open files
         self.openfds = {0:None, 1:None, 2:None}
 
     def __call__(self, op, path, *args):
         """ for FUSE """
-        return super(ID11DiskMounter, self).__call__(op, self.root + path, *args)
+        return super(ID11DiskMounter, self).__call__(
+            op, self.root + path, *args)
 
     def access(self, path, mode):
         if not os.access(path, mode):
@@ -51,11 +53,10 @@ class ID11DiskMounter( LoggingMixIn, Operations):
             if fname in self.data.filenames and not os.path.exists(path):
                 self.openfds[outfd] = fname
             else:
-                if args[0] & os.O_TEXT:
-                    logging.WARNING("Opening as text")
-                    newfd = os.open(path, args[0], **kwds)
-                else:
-                    newfd = os.open(path, os.O_BINARY | args[0], **kwds )
+                flags = args[0]
+                if hasattr(os, "O_BINARY") and not (args[0] & os.O_TEXT):
+                    flags |= os.O_BINARY
+                newfd = os.open(path, flags, **kwds)
                 self.openfds[outfd] = newfd
             return outfd
 
@@ -72,7 +73,8 @@ class ID11DiskMounter( LoggingMixIn, Operations):
                     frm.seek( offset, 0 )
                     myret = frm.read( size )
             else:
-                logging.ERROR("Read on a closed file %d %s"%(outfd, str(self.openfds)))
+                logging.ERROR("Read on a closed file %d %s"%(
+                    outfd, str(self.openfds)))
                 myret = b""
             return myret
 
@@ -90,9 +92,14 @@ class ID11DiskMounter( LoggingMixIn, Operations):
                 f.truncate(length)
 
     def create(self, path, mode):
-        """ Creates a new file - the O_BINARY seems to be critical for windows? """
+        """ Creates a new file - 
+        the O_BINARY seems to be critical for windows? 
+        """
         with self.rwlock:
-            newfd = os.open(path, os.O_BINARY | os.O_RDWR | os.O_CREAT | os.O_TRUNC , mode)
+            flags = os.O_RDWR | os.O_CREAT | os.O_TRUNC
+            if hasattr(os, "O_BINARY"):
+                flags |= os.O_BINARY
+            newfd = os.open(path, flags , mode)
             outfd = max(self.openfds.keys()) + 1
             self.openfds[ outfd ] = newfd
             return outfd
