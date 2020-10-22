@@ -34,6 +34,8 @@ class ID11DiskMounter( LoggingMixIn, Operations):
         # fake files
         # keys in here are the open files
         self.openfds = {0:None, 1:None, 2:None}
+        #  int : int    == system files
+        #  int : string == our files
 
     def __call__(self, op, path, *args):
         """ for FUSE """
@@ -46,7 +48,7 @@ class ID11DiskMounter( LoggingMixIn, Operations):
 
     def open(self, path, *args, **kwds):
         """ Open a file - system pass through or one of ours """
-        with self.rwlock:
+        with self.rwlock: # because we modify openfds
             direc, fname = os.path.split( path )
             # new file descriptor is:
             outfd = max(self.openfds.keys()) + 1
@@ -65,20 +67,15 @@ class ID11DiskMounter( LoggingMixIn, Operations):
         with self.rwlock:
             if outfd in self.openfds: # file is open
                 sysfd = self.openfds[outfd]
-                if sysfd not in self.data.filenames:
+                if isinstance( sysfd, int ):
                     os.lseek(sysfd, offset, 0)
-                    myret = os.read(sysfd, size)
-                else:
-                    frm = self.data[sysfd]
-                    frm.seek( offset, 0 )
-                    myret = frm.read( size )
-            else:
-                logging.ERROR("Read on a closed file %d %s"%(
-                    outfd, str(self.openfds)))
-                myret = b""
-            return myret
+                    return os.read(sysfd, size)
+        # free the lock now, this is slow but not vulnerable to writes
+        frm = self.data[sysfd]
+        frm.seek( offset, 0 )
+        return frm.read( size )
 
-    # Pass through 
+    # Pass through method
     mkdir = os.mkdir
 
     def truncate(self, path, length, fh=None):
@@ -89,7 +86,7 @@ class ID11DiskMounter( LoggingMixIn, Operations):
                 return os.ftruncate( self.openfds[fh], length  )
             # otherwise a path
             with open(path, 'r+') as f:
-                f.truncate(length)
+                return f.truncate(length)
 
     def create(self, path, mode):
         """ Creates a new file - 

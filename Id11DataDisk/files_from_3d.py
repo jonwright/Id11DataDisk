@@ -21,6 +21,7 @@ class H5As3d( object ):
         # Decide on which frame has which filename:
         rng = range(self.data.shape[0])
         self.filenames = [ self.name(i) for i in range(len(self)) ]
+        self.filenames = set( self.filenames )
         self.current = 0
         self._file_size = None
 
@@ -114,4 +115,3 @@ if __name__=="__main__":
     e = FlatFrom3d( sys.argv[1], sys.argv[2] )
     blob = e[0]
     print(len(e), e.filenames[0], e.filesize() )
-    
