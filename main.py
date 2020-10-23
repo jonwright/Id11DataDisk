@@ -25,12 +25,22 @@ def main():
     root = args.mount + "_real"
     # root is a real existing disk folder
     try:
+        # we do it this way around so that when we are finished
+        # the path used by the legacy software still sees args.mount
+        # when it goes back to being the real folder.
         print("Renaming your folder from:", args.mount, "to:", root)
         os.rename( args.mount, root )
+    except:
+        print("Failed!! to rename from:", args.mount, "to:", root, 'exiting')
+        raise
+        sys.exit()
+    try:
+        # Put any other FUSE options here:
         kwds = { 'foreground' : True, }
         if os.name == 'nt':
-            kwds['allow_other'] = True   # check this ...
-            kwds['uid'] = -1
+            assert not os.path.exists(args.mount), args.mount+" already exists?"
+            kwds['allow_other'] = True   # on windows everyone is root
+            kwds['uid'] = -1             # really, everyone
         else:
             # windows does not want the mount point to exist
             # linux does want it to exist already
@@ -43,9 +53,9 @@ def main():
         # put it back
         print("Renaming your folder back:", root, "to:", args.mount)
         os.rename( root, args.mount )
-        # close h5 and free 
+        # close h5 and free
         del disk
-        
+
 if __name__ == '__main__':
     main()
 
