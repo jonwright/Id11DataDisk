@@ -116,3 +116,15 @@ it runs on windows due to the winfsp driver from @billziss-gh,
 both of whom are on github. Reading the hdf5 files relies on the
 very convenient hdf5plugin and the file conversion to edf is
 using fabio.
+
+## Related things
+
+https://www.logilab.org/project/h5fs
+H5FS is a mountable Linux virtual file system that allows to read the content of HDF5 as if they were real files.
+
+https://github.com/glaweh/hdf5fs-wrapper
+hdf5fs-wrapper maps file-IO operations for selected files to HDF5 archives to avoid
+the many-small-files problem.
+
+http://docs.danse.us/DrChops/current/hdf5fs/hdf5fs/html/index.html
+
