@@ -14,16 +14,18 @@ antivirus software.
 
 Why bother? A typical short scan is less than 3GB in the new hdf5
 format versus 24GB as uncompressed files. When debugging you can
-re-write the fake file headers be restarting the file server and
-without doing the 24GB of disk writes.
+re-write thousands of fake file headers by restarting the file server
+and without needing the 24GB of disk writes.
 
 A few quick google searches have not yet uncovered a professional
 quality implemention for doing this yet. This was written using a
 trial and error approach, so you should expect to find bugs. It
 appears to be a very difficult problem and there are very good
-reasons NOT to do this. Reading the hdf5 instead would be better.
+reasons NOT to do this. Reading the hdf5 files would be better.
 
 ## What does it do ?
+
+It turns a real folder into a faked folder which has extra files inside.
 
 - you select an existing folder on your disk
 - this is renamed to folder_real
@@ -34,7 +36,7 @@ reasons NOT to do this. Reading the hdf5 instead would be better.
 - folder_real is now renamed back to folder
 
 The reason it does this is to allow some windows software to
-write paths into binary files. It should be equivalent to dumping
+write paths into binary files. It might be equivalent to dumping
 the files into a folder and deleting them afterwards.
 
 ## Usage
@@ -63,18 +65,20 @@ you want to use for the passthrough filesystem.
 
 ## Example
 
-0) `git clone https://github.com/jonwright/Id11DataDisk`
-1) hdf5 file : c:\temp\sucrrose_sx_1.h5
-2) scan to process : 3.1/measurement/eiger
-3) folder to work in c:\temp\demo
-    `mkdir c:\temp\deco`
-4) python main.py c:\temp\sucrrose_sx_1.h5 3.1/measurement/eiger c:\temp\demo --format=flat
-5) Open crysalis
-6) import/export, import unknown, fill all the options, click ok
+0) run `git clone https://github.com/jonwright/Id11DataDisk`
+1) find a hdf5 file : `c:\temp\sucrose_sx_1.h5`
+2) decide on a scan to process : `3.1/measurement/eiger`
+3) make folder to save work in : `mkdir c:\temp\demo`
+4) run this `python main.py c:\temp\sucrose_sx_1.h5 3.1/measurement/eiger c:\temp\demo --format=flat`
+5) Open crysalis ( fit2d / whatever and do your magic )
+6) Import as flat binary. Get all the options right. Click ok.
 7)  ... be very patient !
-8) control-c to exit the python process
+8) Exit any software that has these files open
+10) control-c to exit the python process
 
-## python fuse wrappers
+Results from your processing should now be found in `c:\temp\demo`
+
+## Which python fuse wrappers?
 
 There seem to be various FUSE wrappers for python with differences
 between FUSE2 and FUSE3 and various forks. None of them seem
@@ -86,15 +90,15 @@ https://github.com/pleiszenburg/refuse/pull/29
 
 We did this:
 
-`git clone --single-branch --branch example https://github.com/clach04/refuse/ clach04_refuse_example`
+```
+git clone --single-branch --branch example https://github.com/clach04/refuse/ clach04_refuse_example
+mkdir vendored_refuse
+cp clach04_refuse_example/src/refuse/*.py vendored_refuse/
+cp clach04_refuse_example/*.md vendored_refuse/
+cp clach04_refuse_example/LICENSE vendored_refuse/
+```
 
-`mkdir vendored_refuse`
-
-`cp clach04_refuse_example/src/refuse/*.py vendored_refuse/`
-
-`cp clach04_refuse_example/*.md vendored_refuse/`
-
-`cp clach04_refuse_example/LICENSE vendored_refuse/`
+... and then put an edit on the logging to see if it speeds anything up.
 
 ## History
 
@@ -112,9 +116,3 @@ it runs on windows due to the winfsp driver from billziss-gh,
 both of whom are on github. Reading the hdf5 files relies on the
 very convenient hdf5plugin and the file conversion to edf is
 using fabio.
-
-
-
-
-
-
