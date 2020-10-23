@@ -111,8 +111,8 @@ Diamond Light Source, Didcot, Chilton. Friday, 17 August 2007, 12:30 - 17:00
 
 ## Credits
 
-This was built using the loopback example from clach04 and
-it runs on windows due to the winfsp driver from billziss-gh,
+This was built using the loopback example from @clach04 and
+it runs on windows due to the winfsp driver from @billziss-gh,
 both of whom are on github. Reading the hdf5 files relies on the
 very convenient hdf5plugin and the file conversion to edf is
 using fabio.
