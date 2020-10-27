@@ -1,6 +1,6 @@
 
 
-from . import id11diskmounter, files_from_3d
+from . import id11diskmounter, files_from_3d, id11esperanto
 import argparse, logging, sys, os
 
 def main(args):
@@ -12,6 +12,8 @@ def main(args):
         data = files_from_3d.EdfFrom3d( args.h5file, args.scan )
     elif args.format == 'flat':
         data = files_from_3d.FlatFrom3d( args.h5file, args.scan )
+    elif args.format == 'esperanto':
+        data = id11esperanto.EsperantoFrom3d( args.h5file, args.scan )
     else:
         print("Not recognised format ",args.format)
         sys.exit()
