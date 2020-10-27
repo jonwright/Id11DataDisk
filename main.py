@@ -1,5 +1,5 @@
 
-from Id11DataDisk import main
+from Id11DataDisk.main import main
 import argparse
 
 if __name__ == '__main__':
