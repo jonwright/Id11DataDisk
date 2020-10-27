@@ -219,7 +219,7 @@ class EsperantoFrom3d( H5As3d ):
         hd[ 'dom_e' ] = (i+1)*self.stepangle + self.startangle
         return esperanto_write_header( hd, hlines )
 
-    def toBytesIO(self, i):
+    def toBlob(self, i):
         """ Convert the numpy array to a file """
         blob = io.BytesIO( )
         if self.reverse:
@@ -227,6 +227,5 @@ class EsperantoFrom3d( H5As3d ):
         else:
             j = i
         self.padded = pad_4( self.data[j] )   # slow ?
-        blob.write( self.makeheader(i) )
-        blob.write( self.padded.tobytes() )
+        blob = bytearray( self.makeheader(i) + self.padded.tobytes() )
         return blob

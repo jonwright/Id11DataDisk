@@ -34,15 +34,15 @@ class H5As3d( object ):
         """ Get the frame index from the filenane """
         return int( name[len(self.stem):-len(self.extn)] )-1
 
-    def toBytesIO(self, i): # to override
+    def toBlob(self, i): # to override
         """ Convert the numpy array to a file """
-        return io.BytesIO( self.data[i].tobytes() )
+        return bytearray( self.data[i].tobytes() )
 
     def filesize(self, arg = 0): # to override
         """ Size of the files """
         if self._file_size is None:
             blob = self[arg]
-            self._file_size = blob.getbuffer().nbytes
+            self._file_size = len(blob) #getbuffer().nbytes
         return self._file_size
 
     # The rest is hopefully common to most 3D data arrays
@@ -66,7 +66,7 @@ class H5As3d( object ):
     @functools.lru_cache(maxsize=LRU_CACHE_SIZE) #
     def __getitem__(self, arg):
         """
-        Given a filename : return a bytesio
+        Given a filename : return a Blob
         """
         if arg is None:
             i = self.current
@@ -76,33 +76,33 @@ class H5As3d( object ):
             i = self.num( arg ) # raises KeyError if missing
         if i < 0 or i > len(self):
             raise KeyError("Not found %s"%(arg))
-        return self.toBytesIO(i)
+        return self.toBlob(i)
 
 
 class EdfFrom3d( H5As3d ):
 
     extn=".edf"
 
-    def toBytesIO(self, i):
+    def toBlob(self, i):
         """ Convert the numpy array to a file """
         edf = fabio.edfimage.edfimage( self.data[i] )
         # TODO: headers:
         edf.header["Omega"] = i
         edf._frames[0]._index = 0   # strange that we need to do this?
-        blob = io.BytesIO( edf._frames[0].get_edf_block() )
+        blob = bytearray( edf._frames[0].get_edf_block() )
         return blob
 
 class FlatFrom3d( H5As3d ):
 
     extn=".raw"
 
-    def toBytesIO( self, i):
+    def toBlob( self, i):
         """ Convert the numpy array to a file """
         frm = self.data[i]
         h1 = b"BINARY slow %5d x fast %5d header 256 bytes type "%( frm.shape[0], frm.shape[1])
         header = b"%-253s\r\n\x1A"%(h1 + frm.dtype.name.encode("ASCII"))
         assert len(header)==256
-        blob = io.BytesIO( header + frm.tobytes() )
+        blob = bytearray( header + frm.tobytes() )
         return blob
 
 if __name__=="__main__":

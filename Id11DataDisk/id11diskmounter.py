@@ -4,7 +4,7 @@
 # https://github.com/clach04/refuse/blob/example/src/examples/loopback.py
 #
 # These imports are from stdlib
-import logging, os
+import logging, os, ctypes
 import stat, io, threading, errno
 
 from .vendored_refuse.high import FUSE, FuseOSError, Operations, LoggingMixIn
@@ -22,7 +22,7 @@ class ID11DiskMounter( LoggingMixIn, Operations):
         self.root = os.path.realpath(root)
         self.rwlock = threading.Lock()
         self.data = data
-        # 
+        #
         st = os.lstat(root) # folder stat defaults for creation time etc
         self.st = dict((key, getattr(st, key)) for key in (
             'st_atime', 'st_ctime', 'st_gid', 'st_mtime',
@@ -72,8 +72,11 @@ class ID11DiskMounter( LoggingMixIn, Operations):
                     return os.read(sysfd, size)
         # free the lock now, this is slow but not vulnerable to writes
         frm = self.data[sysfd]
-        frm.seek( offset, 0 )
-        return frm.read( size )
+        if offset > len(frm):
+            print("attempt to read past end",path)
+        if (size+offset) > len(frm):
+            size = len(frm) - offset
+        return (ctypes.c_char * size).from_buffer(frm, offset)
 
     # Pass through method
     mkdir = os.mkdir
@@ -89,8 +92,8 @@ class ID11DiskMounter( LoggingMixIn, Operations):
                 return f.truncate(length)
 
     def create(self, path, mode):
-        """ Creates a new file - 
-        the O_BINARY seems to be critical for windows? 
+        """ Creates a new file -
+        the O_BINARY seems to be critical for windows?
         """
         with self.rwlock:
             flags = os.O_RDWR | os.O_CREAT | os.O_TRUNC
