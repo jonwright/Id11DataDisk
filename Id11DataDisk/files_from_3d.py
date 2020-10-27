@@ -7,10 +7,11 @@ os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 import numpy
 import hdf5plugin, h5py
 import fabio, io
+from . import LRU_CACHE_SIZE
 
 class H5As3d( object ):
     """ Maps a 3D array in a hdf5 file to stack of 2D image files """
-    
+
     extn = ""
 
     def __init__(self, h5filename, scan, stem='data' ):
@@ -62,7 +63,7 @@ class H5As3d( object ):
         else:
             return StopIteration
 
-    @functools.lru_cache(maxsize=3)
+    @functools.lru_cache(maxsize=LRU_CACHE_SIZE) #
     def __getitem__(self, arg):
         """
         Given a filename : return a bytesio
@@ -90,7 +91,7 @@ class EdfFrom3d( H5As3d ):
         edf._frames[0]._index = 0   # strange that we need to do this?
         blob = io.BytesIO( edf._frames[0].get_edf_block() )
         return blob
- 
+
 class FlatFrom3d( H5As3d ):
 
     extn=".raw"
@@ -103,8 +104,6 @@ class FlatFrom3d( H5As3d ):
         assert len(header)==256
         blob = io.BytesIO( header + frm.tobytes() )
         return blob
-
-
 
 if __name__=="__main__":
     # Potential program here: write the blobs to disk

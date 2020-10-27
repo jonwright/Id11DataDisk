@@ -1,6 +1,6 @@
 
 
-import collections, time, io, numpy as np
+import collections, functools, time, io, numpy as np
 from .files_from_3d import H5As3d
 """
 # write out an eiger frame in esperanto format
@@ -155,7 +155,7 @@ def eiger2_defaults(wvln):
         "dom_s": 0., "dth_s": 0., "dka_s": 0., "dph_s": 0.,
         "dom_e": 0., "dth_e": 0., "dka_e": 0., "dph_e": 0.,
         "dbeam2indeg": 0., "dbeam3indeg": 0., "detectorrotindeg_x": 0., "detectorrotindeg_y": 0., "detectorrotindeg_z": 0., "dxorigininpix": 1024.,
-        "dyorigininpix": 1170, "dalphaindeg": 50.0, "dbetaindeg":0.0, "ddistanceinmm": 120.0,
+        "dyorigininpix": 1171, "dalphaindeg": 50.0, "dbetaindeg":0.0, "ddistanceinmm": 117.26,
         "dzerocorrectionsoftindeg_om": 0., "dzerocorrectionsoftindeg_th": 0., "dzerocorrectionsoftindeg_ka": 0., "dzerocorrectionsoftindeg_ph": 0.,
         "dalpha1": wvln, "dalpha2": wvln, "dalpha12": wvln, "dbeta1":wvln,
         "ddvalue–prepolfac": 0.98, "orientation–type": "SYNCHROTRON",
@@ -176,23 +176,23 @@ def hungfmt( item, value ):
         print(item,repr(value),type(value))
         raise
 
-def esperanto_write_header( hd, hlines, bio ):
-    """ Write the keys in hd using the layout in hlines to binary IO thing bio """
-    bio.write( b"%-254s"%(b"ESPERANTO FORMAT   1 CONSISTING OF   25 LINES OF   256 BYTES EACH"))
+def esperanto_write_header( hd, hlines ):
+    """ Write the keys in hd using the layout in hlines to a byte string """
+    bio = [b"%-254s"%(b"ESPERANTO FORMAT   1 CONSISTING OF   25 LINES OF   256 BYTES EACH"),]
     nl = 1
     for key in hlines.keys():
         tokens = [key,]
         for item in hlines[key]:
             tokens.append(hungfmt(item, hd[item]))
         line = " ".join(tokens)
-        bio.write( b"\r\n%-254s"%( line.encode('ASCII') ) )
+        bio.append(  b"\r\n%-254s"%( line.encode('ASCII') ) )
         nl += 1
     blank = b"\r\n" + b" "*254
     while nl < 25:
-        bio.write( blank )
+        bio.append( blank )
         nl += 1
-    bio.write( b"\r\x1A" )
-
+    bio.append( b"\r\x1A" )
+    return b"".join(bio)
 
 
 class EsperantoFrom3d( H5As3d ):
@@ -211,6 +211,14 @@ class EsperantoFrom3d( H5As3d ):
         """ Generate some filename pattern """
         return "%s%d%s"%(self.stem, i+1, self.extn)
 
+    @functools.lru_cache(maxsize=None) # grows without bound. Beware.
+    def makeheader(self, i):
+        hd = eiger2_defaults( 0.308 )
+        hd["lny"] , hd["lny"] = self.padded.shape
+        hd[ 'dom_s' ] = i*self.stepangle + self.startangle        # etc
+        hd[ 'dom_e' ] = (i+1)*self.stepangle + self.startangle
+        return esperanto_write_header( hd, hlines )
+
     def toBytesIO(self, i):
         """ Convert the numpy array to a file """
         blob = io.BytesIO( )
@@ -218,11 +226,7 @@ class EsperantoFrom3d( H5As3d ):
             j = len(self.data) - 1 - i
         else:
             j = i
-        padded = pad_4( self.data[j] )
-        hd = eiger2_defaults( 0.308 )
-        hd["lny"] , hd["lny"] = padded.shape
-        hd[ 'dom_s' ] = i*self.stepangle + self.startangle        # etc
-        hd[ 'dom_e' ] = (i+1)*self.stepangle + self.startangle
-        esperanto_write_header( hd, hlines, blob )
-        blob.write( padded.tobytes() )
+        self.padded = pad_4( self.data[j] )   # slow ?
+        blob.write( self.makeheader(i) )
+        blob.write( self.padded.tobytes() )
         return blob
