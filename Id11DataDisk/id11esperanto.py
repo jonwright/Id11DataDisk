@@ -142,7 +142,7 @@ hitems_help = {
 def eiger2_defaults(wvln):
     return { "lnx": 2164,"lny":2164, "lbx":1, "lby":1, "spixelformat":"4BYTE_LONG",
         "delectronsperadu": 1.0, "ldarkcorrectionswitch":0, "lfloodfieldcorrectionswitch/mode":0, "dsystemdcdb2gain":1.0, "ddarksignal":0.0, "dreadnoiserms":0.0,
-        "ioverflowflag": 0, "ioverflowafterremeasureflag":0, "inumofdarkcurrentimages":1, "inumofmultipleimages":0,  "loverflowthreshold":90000000,
+        "ioverflowflag": 0, "ioverflowafterremeasureflag":0, "inumofdarkcurrentimages":0, "inumofmultipleimages":0,  "loverflowthreshold":90000000,
         "ldetector_descriptor":0, "lisskipcorrelation":0, "lremeasureturbomode":0, "bfsoftbinningflag":0, "bflownoisemodeflag":0,
         "lremeasureinturbo_done":0, "lisoverflowthresholdchanged":0, "loverflowthresholdfromimage":0, "lisdarksignalchanged":0, "lisreadnoisermschanged":0, "lisdarkdone":0, "lisremeasurewithskipcorrelation":0, "lcorrelationshift":0,
         "dblessingrej":0., "ddarksignalfromimage":0., "dreadnoisermsfromimage":0., "dtrueimagegain":0.,
@@ -199,7 +199,7 @@ class EsperantoFrom3d( H5As3d ):
     extn=".esperanto"
 
     def __init__(self, h5filename, scan, stem='data_1_', reverse=True,
-                startangle = -180., stepangle=0.25, expo=0.2 ):
+                startangle = -180., stepangle=0.25, expo=1.0 ):
         H5As3d.__init__(self, h5filename, scan, stem='data_1_' )
         nframes = self.data.shape[0]
         self.startangle = startangle
