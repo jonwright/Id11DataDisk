@@ -69,7 +69,7 @@ you want to use for the passthrough filesystem.
 1) find a hdf5 file : `c:\temp\sucrose_sx_1.h5`
 2) decide on a scan to process : `3.1/measurement/eiger`
 3) make folder to save work in : `mkdir c:\temp\demo`
-4) run this `python main.py c:\temp\sucrose_sx_1.h5 3.1/measurement/eiger c:\temp\demo --format=flat`
+4) run this `python main.py c:\temp\demo c:\temp\sucrose_sx_1.h5 3.1/measurement/eiger --format=flat`
 5) Open crysalis ( fit2d / whatever and do your magic )
 6) Import as flat binary. Get all the options right. Click ok.
 7)  ... be very patient !
