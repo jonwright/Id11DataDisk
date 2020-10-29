@@ -13,32 +13,39 @@ class H5As3d( object ):
     """ Maps a 3D array in a hdf5 file to stack of 2D image files """
 
     extn = ""
-
-    def __init__(self, h5filename, scan, stem='data' ):
+    fmt = "%s%04d%s"
+    def __init__(self, h5filename, dataset, stem='data', **kwds):
+        """
+        h5filename = h5file to get the data from
+        dataset = 3d array to map
+        stem = output name stem
+        """
         self.stem = stem
         self.h5o = h5py.File( h5filename, "r" )
-        self.data = self.h5o[scan]
+        self.data = self.h5o[dataset]
         assert len(self.data.shape) == 3, "We need a 3D array please!"
         # Decide on which frame has which filename:
-        rng = range(self.data.shape[0])
-        self.filenames = [ self.name(i) for i in range(len(self)) ]
-        self.filenames = set( self.filenames )
+        self.filename_list = [ self.name(i) for i in range(len(self)) ]
+        self.filename_lut = { fname : i for i,fname in enumerate(self.filename_list) }
+        self.filenames = set( self.filename_list )
         self.current = 0
+        for key in kwds.keys():
+            setattr( self, key, kwds[key] )
         self._file_size = None
 
     def name(self, i):  # to override
         """ Generate some filename pattern """
-        return "%s%04d%s"%(self.stem, i+1, self.extn)
+        return self.fmt%(self.stem, i+1, self.extn)
 
     def num(self, name): # to override
         """ Get the frame index from the filenane """
-        return int( name[len(self.stem):-len(self.extn)] )-1
+        return self.filename_lut[name]
 
     def toBlob(self, i): # to override
         """ Convert the numpy array to a file """
         return bytearray( self.data[i].tobytes() )
 
-    def filesize(self, arg = 0): # to override
+    def filesize(self, arg=0): # to override
         """ Size of the files """
         if self._file_size is None:
             blob = self[arg]
@@ -51,30 +58,16 @@ class H5As3d( object ):
         """ Number of frames """
         return self.data.shape[0]
 
-    def __iter__(self):
-        self.current = 0
-        return self
-
-    def __next__(self):
-        if self.current < len(self):
-            blob = self[ None ]
-            self.current += 1
-            return blob
-        else:
-            return StopIteration
-
     @functools.lru_cache(maxsize=LRU_CACHE_SIZE) #
     def __getitem__(self, arg):
         """
         Given a filename : return a Blob
         """
-        if arg is None:
-            i = self.current
-        elif isinstance( arg, int):
+        if isinstance( arg, int ):
             i = arg
         else:
             i = self.num( arg ) # raises KeyError if missing
-        if i < 0 or i > len(self):
+        if i < 0 or i >= len(self):
             raise KeyError("Not found %s"%(arg))
         return self.toBlob(i)
 
@@ -86,9 +79,9 @@ class EdfFrom3d( H5As3d ):
     def toBlob(self, i):
         """ Convert the numpy array to a file """
         edf = fabio.edfimage.edfimage( self.data[i] )
-        # TODO: headers:
-        edf.header["Omega"] = i
         edf._frames[0]._index = 0   # strange that we need to do this?
+        edf.header['Omega'] = self.startangle + i*self.stepangle
+        edf.header['OmegaStep'] = self.stepangle
         blob = bytearray( edf._frames[0].get_edf_block() )
         return blob
 
