@@ -5,15 +5,15 @@ import argparse, logging, sys, os
 
 def main(args):
 
-    logging.basicConfig(level=logging.ERROR)
-#    logging.basicConfig(level=logging.DEBUG)
+    for k,v in vars(args).items():
+        print(k,':',v)
 
     if args.format == 'edf':
-        data = files_from_3d.EdfFrom3d( args.h5file, args.scan )
+        data = files_from_3d.EdfFrom3d( args.h5file, args.scan, **vars(args) )
     elif args.format == 'flat':
-        data = files_from_3d.FlatFrom3d( args.h5file, args.scan )
+        data = files_from_3d.FlatFrom3d( args.h5file, args.scan, **vars(args) )
     elif args.format == 'esperanto':
-        data = id11esperanto.EsperantoFrom3d( args.h5file, args.scan )
+        data = id11esperanto.EsperantoFrom3d( args.h5file, args.scan, **vars(args) )
     else:
         print("Not recognised format ",args.format)
         sys.exit()
@@ -25,7 +25,11 @@ def main(args):
         # the path used by the legacy software still sees args.mount
         # when it goes back to being the real folder.
         print("Renaming your folder from:", args.mount, "to:", root)
-        os.rename( args.mount, root )
+        if os.path.exists( args.mount ):
+            os.rename( args.mount, root )
+        else:
+            if not os.path.exists( root ):
+                os.mkdir( root )
     except:
         print("Failed!! to rename from:", args.mount, "to:", root, 'exiting')
         raise
@@ -52,12 +56,22 @@ def main(args):
         # close h5 and free
         del disk
 
-if __name__ == '__main__':
+def makeArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument('mount')
     parser.add_argument('h5file')
     parser.add_argument('scan')
+    parser.add_argument("--stem",dest="stem", default='data')
     parser.add_argument("--format", dest='format', default = 'edf')
+    parser.add_argument("--startangle", dest='startangle', default = 0.0)
+    parser.add_argument("--stepangle", dest='stepangle', default = 0.25)
+    parser.add_argument("--expotime", dest='expotime', default=1.0)
+    parser.add_argument("--wavelength", dest='wavelength', default=0.308)
+    parser.add_argument("--run", dest='run', default = 1)
+    return parser
+
+if __name__ == '__main__':
+    parser = makeArgs()
     args = parser.parse_args()
     main(args)
 
