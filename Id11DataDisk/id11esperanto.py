@@ -9,6 +9,13 @@ from .files_from_3d import H5As3d
     "Single-crystal diffraction at the Extreme Conditions beamline P02.2: procedure for collecting and analyzing high-pressure single-crystal data"
     André Rothkirch, G. Diego Gatta, Mathias Meyer, Sébastien Merkel, Marco Merlini and Hanns-Peter Liermann
     Journal of Synchrotron Radiation, 2013, 20(5), 711-720
+
+
+Notes for using crysalis
+    F5 : opens the command window
+    esperanto createrunlist    : select the first / last esperanto file
+    xx ccdtoset   : dumps the ccd file to a set file
+    xx settoccd   : converts the set file to a ccd file
 """
 
 def pad_4( ar ):
@@ -31,7 +38,7 @@ hlines = collections.OrderedDict( [ (k,v.split()) for k,v in [
         ("TIME","dexposuretimeinsec doverflowtimeinsec doverflowfilter"),
         ("MONITOR","lmon1 lmon2 lmon3 lmon4"),
         ("ABSTORUN","labstorunscale"),
-        ("PIXELSIZE","drealpixelsizex drealpixelsizey dthickness"),
+        ("PIXELSIZE","drealpixelsizex drealpixelsizey dsithicknessmmforpixeldetector"),
         ("TIMESTAMP","timestampstring"),
         ("GRIDPATTERN","filename"),
         ("STARTANGLESINDEG","dom_s dth_s dka_s dph_s"),
@@ -96,7 +103,7 @@ hitems_help = {
 
         "drealpixelsizex":"(M)	Pixel size along x direction in mm",
         "drealpixelsizey":"(M)	Pixel size along y direction in mm Note: drealpixelsizex = drealpixelsizey is a requirement",
-        "dthickness": "(O)  Sensor thickness?",
+        "dsithicknessmmforpixeldetector": "(O)  Silicon sensor thickness",
 
         "timestampstring":"(O)	A string containing a time stamp (not used by CrysAlisPro, but useful for documentation purpose)",
 
@@ -149,7 +156,7 @@ def eiger2_defaults(wvln):
         "dexposuretimeinsec":0.1, "doverflowtimeinsec":0., "doverflowfilter":0.,
         "lmon1":0, "lmon2":0, "lmon3":0, "lmon4":0,
         "labstorunscale": 0,
-        "drealpixelsizex":0.075, "drealpixelsizey":0.075, "dthickness": 1.0,
+        "drealpixelsizex":0.075, "drealpixelsizey":0.075, "dsithicknessmmforpixeldetector": 0.75,
         "timestampstring": time.asctime(),
         "filename": "notvalidstring",
         "dom_s": 0., "dth_s": 0., "dka_s": 0., "dph_s": 0.,
@@ -168,9 +175,9 @@ def hungfmt( item, value ):
     """
     try:
         if item[0] in 'bil':
-            return '%d'%(value)
+            return '%d'%(int(value))
         if item[0] == 'd':
-            return '%.6f'%(value)
+            return '%.6f'%(float(value))
         return '"%s"'%(value)
     except:
         print(item,repr(value),type(value))
@@ -196,36 +203,40 @@ def esperanto_write_header( hd, hlines ):
 
 
 class EsperantoFrom3d( H5As3d ):
+
     extn=".esperanto"
+    fmt = "%s%d%s"
 
-    def __init__(self, h5filename, scan, stem='data_1_', reverse=True,
-                startangle = -180., stepangle=0.25, expo=1.0 ):
-        H5As3d.__init__(self, h5filename, scan, stem='data_1_' )
-        nframes = self.data.shape[0]
-        self.startangle = startangle
-        self.stepangle = abs(stepangle)
-        self.expo = expo
-        self.reverse = reverse
+    def __init__(self, h5filename, dataset, **kwds):
+        mykwds = kwds.copy()
+        mykwds['stem'] = "%s_%d_"%(kwds['stem'], kwds['run'] )
+        H5As3d.__init__(self, h5filename, dataset, **mykwds )
+        # ID11 angles
+        self.startangle = float(self.startangle)
+        self.stepangle  = float(self.stepangle)
+        # For crysalis we think we need:
+        #    crysalis omega is -(id11 angle)
+        #    Order of the files is increasing in omega
+        if self.stepangle > 0: # need to flip the name order and angles
+            self.filename_list = self.filename_list[::-1]
+            self.filename_lut = { fname : i for i, fname in enumerate(self.filename_list) }
 
-    def name(self, i):
-        """ Generate some filename pattern """
-        return "%s%d%s"%(self.stem, i+1, self.extn)
 
     @functools.lru_cache(maxsize=None) # grows without bound. Beware.
     def makeheader(self, i):
-        hd = eiger2_defaults( 0.308 )
+        """ i is the array index """
+        hd = eiger2_defaults( self.wavelength )
         hd["lny"] , hd["lny"] = self.padded.shape
-        hd[ 'dom_s' ] = i*self.stepangle + self.startangle        # etc
-        hd[ 'dom_e' ] = (i+1)*self.stepangle + self.startangle
+        if self.stepangle > 0: # images were flipped
+            omega = -(self.startangle + (i+1) * self.stepangle)
+        else:
+            omega = -(self.startangle + i * self.stepangle)
+        hd[ 'dom_s' ] = omega
+        hd[ 'dom_e' ] = omega + abs(self.stepangle)
         return esperanto_write_header( hd, hlines )
 
     def toBlob(self, i):
         """ Convert the numpy array to a file """
-        blob = io.BytesIO( )
-        if self.reverse:
-            j = len(self.data) - 1 - i
-        else:
-            j = i
-        self.padded = pad_4( self.data[j] )   # slow ?
+        self.padded = pad_4( self.data[i] )   # slow ?
         blob = bytearray( self.makeheader(i) + self.padded.tobytes() )
         return blob
