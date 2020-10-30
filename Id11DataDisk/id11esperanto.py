@@ -1,7 +1,9 @@
 
 
 import collections, functools, time, io, numpy as np
+import cryio # thankyou Vadim!!
 from .files_from_3d import H5As3d
+
 """
 # write out an eiger frame in esperanto format
 
@@ -149,7 +151,7 @@ hitems_help = {
 def eiger2_defaults(wvln):
     return { "lnx": 2164,"lny":2164, "lbx":1, "lby":1, "spixelformat":"4BYTE_LONG",
         "delectronsperadu": 1.0, "ldarkcorrectionswitch":0, "lfloodfieldcorrectionswitch/mode":0, "dsystemdcdb2gain":1.0, "ddarksignal":0.0, "dreadnoiserms":0.0,
-        "ioverflowflag": 0, "ioverflowafterremeasureflag":0, "inumofdarkcurrentimages":0, "inumofmultipleimages":0,  "loverflowthreshold":90000000,
+        "ioverflowflag": 0, "ioverflowafterremeasureflag":0, "inumofdarkcurrentimages":0, "inumofmultipleimages":0,  "loverflowthreshold": 1000000,
         "ldetector_descriptor":0, "lisskipcorrelation":0, "lremeasureturbomode":0, "bfsoftbinningflag":0, "bflownoisemodeflag":0,
         "lremeasureinturbo_done":0, "lisoverflowthresholdchanged":0, "loverflowthresholdfromimage":0, "lisdarksignalchanged":0, "lisreadnoisermschanged":0, "lisdarkdone":0, "lisremeasurewithskipcorrelation":0, "lcorrelationshift":0,
         "dblessingrej":0., "ddarksignalfromimage":0., "dreadnoisermsfromimage":0., "dtrueimagegain":0.,
@@ -158,7 +160,7 @@ def eiger2_defaults(wvln):
         "labstorunscale": 0,
         "drealpixelsizex":0.075, "drealpixelsizey":0.075, "dsithicknessmmforpixeldetector": 0.75,
         "timestampstring": time.asctime(),
-        "filename": "notvalidstring",
+        "filename": "",
         "dom_s": 0., "dth_s": 0., "dka_s": 0., "dph_s": 0.,
         "dom_e": 0., "dth_e": 0., "dka_e": 0., "dph_e": 0.,
         "dbeam2indeg": 0., "dbeam3indeg": 0., "detectorrotindeg_x": 0., "detectorrotindeg_y": 0., "detectorrotindeg_z": 0., "dxorigininpix": 1024.,
@@ -214,6 +216,7 @@ class EsperantoFrom3d( H5As3d ):
         # ID11 angles
         self.startangle = float(self.startangle)
         self.stepangle  = float(self.stepangle)
+        self.bitfield = True
         # For crysalis we think we need:
         #    crysalis omega is -(id11 angle)
         #    Order of the files is increasing in omega
@@ -233,10 +236,15 @@ class EsperantoFrom3d( H5As3d ):
             omega = -(self.startangle + i * self.stepangle)
         hd[ 'dom_s' ] = omega
         hd[ 'dom_e' ] = omega + abs(self.stepangle)
+        if self.bitfield:
+            hd[ 'spixelformat' ] = 'AGI_BITFIELD'
         return esperanto_write_header( hd, hlines )
 
     def toBlob(self, i):
         """ Convert the numpy array to a file """
         self.padded = pad_4( self.data[i] )   # slow ?
-        blob = bytearray( self.makeheader(i) + self.padded.tobytes() )
+        if self.bitfield:
+            blob = bytearray( self.makeheader(i) + cryio._cryio._esp_encode( self.padded ) )
+        else:
+            blob = bytearray( self.makeheader(i) + self.padded.tobytes() )        
         return blob
