@@ -27,7 +27,9 @@ def pad_4( ar ):
     ar4 = np.zeros( (np4, np4), ar.dtype )
     st0 = (ar4.shape[0] - ar.shape[0])//2
     st1 = (ar4.shape[1] - ar.shape[1])//2
-    ar4[st0:st0+ar.shape[0],st1:st1+ar.shape[1]] = ar[:,:]
+    # only shift horizontally, not vertically !
+    # ar4[st0:st0+ar.shape[0],st1:st1+ar.shape[1]] = ar[:,:]
+    ar4[:ar.shape[0],st1:st1+ar.shape[1]] = ar[:,:]
     return ar4
 
 hlines = collections.OrderedDict( [ (k,v.split()) for k,v in [
