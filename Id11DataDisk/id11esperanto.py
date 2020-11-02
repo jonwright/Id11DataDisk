@@ -32,7 +32,7 @@ def pad_4( ar ):
     ar4[:ar.shape[0],st1:st1+ar.shape[1]] = ar[:,:]
     return ar4
 
-def mask2set( padded ):
+def eiger2set(  ):
     """ FIXME? """
     return """#CHIP IDCODE producer type serial
 CHIP IDCODE "n/a" "n/a" "n/a"

@@ -30,6 +30,12 @@ def main(args):
             print( outname )
             with open( outname, "wb" ) as fout:
                 fout.write( data[filename] )
+        if args.format == 'esperanto':
+            with open( 'id11Eiger.set', 'w' ) as fout:
+                fout.write( id11esperanto.eiger2set() )
+            print("Import your data with F5/cmd: 'esperanto createrunlist'")
+            print("Wrote id11Eiger.set, after import copy it to",args.stem+".set")
+            print("Then run F5 cmd: 'xx settoccd'  to load it")
         sys.exit(0)
 
 

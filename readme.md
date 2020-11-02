@@ -78,6 +78,17 @@ you want to use for the passthrough filesystem.
 
 Results from your processing should now be found in `c:\temp\demo`
 
+## Example dumping data
+
+
+```
+python main.py c:\XcaliburData\magnetite_1dp1sNoSat 
+ \\bldata\id11\nanoscope\blc12497\id11\magnetite\magnetite_1dp1sNoSat\magnetite_1dp1sNoSat.h5 
+  1.1/measurement/eiger --format=esperanto --startangle=-180 --stepangle=1 --expotime=0.1 
+ --wavelength=0.20664 --dump --x0=1113.67 --y0=1148.91 --distance=147.22
+```
+
+
 ## Which python fuse wrappers?
 
 There seem to be various FUSE wrappers for python with differences
