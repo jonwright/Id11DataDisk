@@ -32,6 +32,27 @@ def pad_4( ar ):
     ar4[:ar.shape[0],st1:st1+ar.shape[1]] = ar[:,:]
     return ar4
 
+def mask2set( padded ):
+    """ FIXME? """
+    return """#CHIP IDCODE producer type serial
+CHIP IDCODE "n/a" "n/a" "n/a"
+#CHIP TAPER producer type serial
+CHIP TAPER "" "" ""
+#CHIP BADRECTANGLE xl xr yb yt
+CHIP BADRECTANGLE    0 2164  512  550
+CHIP BADRECTANGLE    0 2164 1062 1100
+CHIP BADRECTANGLE    0 2164 1612 1650
+CHIP BADRECTANGLE    0 2164 2162 2164
+CHIP BADRECTANGLE    0   48    0 2164
+CHIP BADRECTANGLE  561  563    0 2164
+CHIP BADRECTANGLE 1076 1088    0 2164
+CHIP BADRECTANGLE 1601 1603    0 2164
+CHIP BADRECTANGLE 2116 2164    0 2164
+#END OF XCALIBUR CHIP CHARACTERISTICS FILE
+"""
+
+
+
 hlines = collections.OrderedDict( [ (k,v.split()) for k,v in [
         ("IMAGE", "lnx lny lbx lby spixelformat"),
         ("SPECIAL_CCD_1","delectronsperadu ldarkcorrectionswitch lfloodfieldcorrectionswitch/mode dsystemdcdb2gain ddarksignal dreadnoiserms"),
@@ -41,7 +62,6 @@ hlines = collections.OrderedDict( [ (k,v.split()) for k,v in [
         ("SPECIAL_CCD_5","dblessingrej ddarksignalfromimage dreadnoisermsfromimage dtrueimagegain"),
         ("TIME","dexposuretimeinsec doverflowtimeinsec doverflowfilter"),
         ("MONITOR","lmon1 lmon2 lmon3 lmon4"),
-        ("ABSTORUN","labstorunscale"),
         ("PIXELSIZE","drealpixelsizex drealpixelsizey dsithicknessmmforpixeldetector"),
         ("TIMESTAMP","timestampstring"),
         ("GRIDPATTERN","filename"),
@@ -51,6 +71,7 @@ hlines = collections.OrderedDict( [ (k,v.split()) for k,v in [
         ("GONIOMODEL_2","dzerocorrectionsoftindeg_om dzerocorrectionsoftindeg_th dzerocorrectionsoftindeg_ka dzerocorrectionsoftindeg_ph"),
         ("WAVELENGTH","dalpha1 dalpha2 dalpha12 dbeta1"),
         ("MONOCHROMATOR","ddvalue–prepolfac orientation–type"),
+        ("ABSTORUN","labstorunscale"),
         ("HISTORY","historystring"),
     ] ] )
 
@@ -150,8 +171,12 @@ hitems_help = {
         "historystring":"(O)	Some image processing history for documentation. Note: limited to single line",
     }
 
-def eiger2_defaults(wvln):
-    return { "lnx": 2164,"lny":2164, "lbx":1, "lby":1, "spixelformat":"4BYTE_LONG",
+def eiger2_defaults( obj ):
+    if hasattr(obj, 'wavelength'):
+        wvln = float(obj.wavelength)
+    else:
+        wvln = 12.3985/43.44
+    dct = { "lnx": 2164,"lny":2164, "lbx":1, "lby":1, "spixelformat":"4BYTE_LONG",
         "delectronsperadu": 1.0, "ldarkcorrectionswitch":0, "lfloodfieldcorrectionswitch/mode":0, "dsystemdcdb2gain":1.0, "ddarksignal":0.0, "dreadnoiserms":0.0,
         "ioverflowflag": 0, "ioverflowafterremeasureflag":0, "inumofdarkcurrentimages":0, "inumofmultipleimages":0,  "loverflowthreshold": 1000000,
         "ldetector_descriptor":0, "lisskipcorrelation":0, "lremeasureturbomode":0, "bfsoftbinningflag":0, "bflownoisemodeflag":0,
@@ -172,6 +197,13 @@ def eiger2_defaults(wvln):
         "ddvalue–prepolfac": 0.98, "orientation–type": "SYNCHROTRON",
         "historystring": "from by %s"%(__file__)
         }
+    for name, dest in [('x0', 'dxorigininpix'),
+                        ('y0', 'dyorigininpix'),
+                        ('distance', 'ddistanceinmm')  ]:
+        if hasattr(obj, name):
+            dct[dest] = float(getattr(obj,name))
+    return dct
+
 
 def hungfmt( item, value ):
     """ Try to format the strings
@@ -230,7 +262,7 @@ class EsperantoFrom3d( H5As3d ):
     @functools.lru_cache(maxsize=None) # grows without bound. Beware.
     def makeheader(self, i):
         """ i is the array index """
-        hd = eiger2_defaults( self.wavelength )
+        hd = eiger2_defaults( self )
         hd["lny"] , hd["lny"] = self.padded.shape
         if self.stepangle > 0: # images were flipped
             omega = -(self.startangle + (i+1) * self.stepangle)
